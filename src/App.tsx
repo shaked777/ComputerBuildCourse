@@ -5,6 +5,12 @@ import { MODULES } from './data/modules'
 import { useProgress } from './state/progress'
 import { buildModuleSession, buildReviewSession, buildSurvivalDeck, buildDailyReviewSession } from './lib/session'
 import { setMuted } from './lib/sound'
+import {
+  challengeIdFromUrl,
+  clearChallengeFromUrl,
+  fetchChallenge,
+  type Challenge,
+} from './lib/challengeApi'
 import Header from './components/Header'
 import LearningPath from './components/LearningPath'
 import QuizSession from './components/QuizSession'
@@ -12,6 +18,9 @@ import ExamSession from './components/ExamSession'
 import StatsView from './components/StatsView'
 import CrownModal from './components/CrownModal'
 import AchievementToast from './components/AchievementToast'
+import WelcomeModal from './components/WelcomeModal'
+import ChallengeModal from './components/ChallengeModal'
+import DuelResult from './components/DuelResult'
 
 type View =
   | { kind: 'path' }
@@ -21,16 +30,41 @@ type View =
   | { kind: 'survival' }
   | { kind: 'exam' }
   | { kind: 'stats' }
+  | { kind: 'duel' }
+  | { kind: 'duelResult'; score: number }
 
 export default function App() {
   const { state, reset, recordSurvival, unlockChapter } = useProgress()
   const [view, setView] = useState<View>({ kind: 'path' })
   const [crownOpen, setCrownOpen] = useState(false)
+  const [friendsOpen, setFriendsOpen] = useState(false)
+  /** A duel arriving via ?challenge= link, waiting to be accepted. */
+  const [pendingChallenge, setPendingChallenge] = useState<Challenge | null>(null)
 
   // Keep the audio engine in sync with the persisted mute setting.
   useEffect(() => setMuted(state.muted), [state.muted])
 
+  // Detect an incoming duel link on load and open the challenge modal.
+  useEffect(() => {
+    const id = challengeIdFromUrl()
+    if (!id) return
+    void fetchChallenge(id).then((challenge) => {
+      if (challenge && challenge.opponent_score == null) {
+        setPendingChallenge(challenge)
+        setFriendsOpen(true)
+      } else {
+        clearChallengeFromUrl() // missing or already-finished duel
+      }
+    })
+  }, [])
+
   const goHome = useCallback(() => setView({ kind: 'path' }), [])
+
+  const endDuelFlow = useCallback(() => {
+    setPendingChallenge(null)
+    clearChallengeFromUrl()
+    setView({ kind: 'path' })
+  }, [])
 
   const handleReset = useCallback(() => {
     if (window.confirm('לאפס את כל ההתקדמות, ה-XP וההישגים? פעולה זו אינה הפיכה.')) {
@@ -47,6 +81,11 @@ export default function App() {
     },
     [unlockChapter],
   )
+
+  const startDuel = useCallback(() => {
+    setFriendsOpen(false)
+    setView({ kind: 'duel' })
+  }, [])
 
   function renderView() {
     switch (view.kind) {
@@ -82,6 +121,37 @@ export default function App() {
             survivalBest={state.survivalBest}
             onSurvivalEnd={recordSurvival}
             onExit={goHome}
+          />
+        )
+
+      case 'duel':
+        return (
+          <QuizSession
+            key="duel"
+            makeQuestions={buildSurvivalDeck}
+            title={pendingChallenge ? `דו־קרב מול ${pendingChallenge.challenger_name}` : 'דו־קרב חברים'}
+            accent="#E11D48"
+            theme="neutral"
+            mode="survival"
+            survivalBest={state.survivalBest}
+            exitOnEnd
+            onSurvivalEnd={(score) => {
+              recordSurvival(score)
+              setView({ kind: 'duelResult', score })
+            }}
+            onExit={endDuelFlow}
+          />
+        )
+
+      case 'duelResult':
+        return (
+          <DuelResult
+            key="duel-result"
+            mode={pendingChallenge ? 'accept' : 'create'}
+            myName={state.username}
+            myScore={view.score}
+            challenge={pendingChallenge ?? undefined}
+            onHome={endDuelFlow}
           />
         )
 
@@ -132,7 +202,12 @@ export default function App() {
       <AnimatePresence mode="wait">
         {view.kind === 'path' ? (
           <motion.div key="path" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            <Header onOpenCrown={() => setCrownOpen(true)} onOpenStats={() => setView({ kind: 'stats' })} />
+            <Header
+              onOpenCrown={() => setCrownOpen(true)}
+              onOpenStats={() => setView({ kind: 'stats' })}
+              onOpenFriends={() => setFriendsOpen(true)}
+              hasPendingChallenge={pendingChallenge !== null}
+            />
             <LearningPath
               onStartModule={(id) => setView({ kind: 'module', id })}
               onReview={() => setView({ kind: 'review' })}
@@ -155,7 +230,16 @@ export default function App() {
       </AnimatePresence>
 
       <CrownModal open={crownOpen} onClose={() => setCrownOpen(false)} onJump={jumpToChapter} />
+      <ChallengeModal
+        open={friendsOpen}
+        pending={pendingChallenge}
+        onClose={() => setFriendsOpen(false)}
+        onStartDuel={startDuel}
+      />
       <AchievementToast />
+
+      {/* First-open onboarding: ask for the player's name right away. */}
+      {!state.onboarded && <WelcomeModal />}
     </div>
   )
 }

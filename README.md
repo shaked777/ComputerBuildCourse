@@ -32,6 +32,13 @@ immediate explanations, XP and a "Practice Weaknesses" review mode.
   achievements gallery, and settings (sound / reset). (`StatsView.tsx`)
 - **Refined bank** — near-duplicate "(גרסה N)" questions de-duplicated at load and question
   text cleaned (`lib/questions.ts`); six more arrange/matching interactive items.
+- **First-open onboarding** — new players are asked for their name immediately
+  (`WelcomeModal.tsx`); it feeds the shared leaderboard and can be changed anytime.
+- **Friend duels (דו־קרב)** — the swords icon opens a challenge flow: play a survival run,
+  get a share link (`?challenge=CODE`, copy / WhatsApp / native share), your friend opens it,
+  plays the same 2-minute run, and the app declares the winner. Backed by a `challenges`
+  table with an update-once RLS policy. (`ChallengeModal.tsx`, `DuelResult.tsx`,
+  `lib/challengeApi.ts`)
 
 ## Stack
 - **React 18 + Vite 4** (TypeScript)
@@ -70,6 +77,69 @@ action that publishes `dist`). Works out of the box thanks to the relative base 
 
 > Progress is stored in each browser's `localStorage` — every visitor gets their own
 > profile/XP automatically; nothing is shared between devices.
+
+## Live leaderboard (Supabase — optional, free)
+
+By default the leaderboard runs in local "הדגמה" mode (4 mock players + you). To make it
+**real and shared across all players**, connect a free [Supabase](https://supabase.com)
+Postgres database. Without keys the app is unaffected — it just stays in demo mode.
+
+### 1 · Create the database
+1. Sign up at <https://supabase.com> (free tier) and create a new project.
+2. In the project, open **SQL Editor → New query**, paste the contents of
+   **`supabase-setup.sql`** (in the repo root — includes both the leaderboard *and* the
+   friend-challenges tables, idempotent and safe to re-run), and run it.
+   For reference, the leaderboard part:
+
+```sql
+-- Leaderboard table
+create table if not exists public.leaderboard (
+  player_id  text primary key,
+  name       text not null check (char_length(name) between 1 and 24),
+  xp         integer not null default 0 check (xp >= 0),
+  updated_at timestamptz not null default now()
+);
+
+-- Row Level Security: allow the public (anon) key to read + upsert scores
+alter table public.leaderboard enable row level security;
+create policy "public read"   on public.leaderboard for select using (true);
+create policy "public insert" on public.leaderboard for insert with check (true);
+create policy "public update" on public.leaderboard for update using (true) with check (true);
+
+-- Optional: seed the friendly "AI" competitors
+insert into public.leaderboard (player_id, name, xp) values
+  ('seed-algo',  'אלגוריתם_מהיר', 520),
+  ('seed-bit',   'ביט_מאסטר',     410),
+  ('seed-ninja', 'קוד_נינגה',     300),
+  ('seed-cpu',   'מעבד_על',       160)
+on conflict (player_id) do nothing;
+```
+
+### 2 · Get your keys
+**Project Settings → API** → copy the **Project URL** and the **anon / public** key.
+(The anon key is meant to be public — RLS above is what protects the data.)
+
+### 3 · Wire them up
+Copy `.env.example` to `.env` and fill in:
+
+```bash
+VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
+```
+
+Restart `npm run dev`. The leaderboard badge flips from **הדגמה** to a green **חי** (live),
+and your XP is published to the shared board. Everyone who opens your deployed site now
+appears on the same leaderboard, ranked by XP, with your true global rank shown even when
+you're outside the top 10.
+
+> **Deploy note:** Vite bakes env vars in at build time. So either build locally with `.env`
+> present and drag `dist` to Netlify, **or** set the two `VITE_…` vars in your host's
+> dashboard (Netlify: Site settings → Environment variables; Vercel: Project → Settings →
+> Environment Variables) and redeploy.
+
+> **Security note:** the policies above let anyone submit a score (fine for a class study
+> app). To lock it down later, add Supabase Auth and restrict `update`/`insert` to
+> `auth.uid() = player_id`.
 
 ## How the 250 questions become a course
 

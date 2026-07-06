@@ -100,6 +100,8 @@ export interface DayLog {
 /** Whole-app persisted state. */
 export interface ProgressState {
   username: string
+  /** Has the player been through the first-open welcome (name prompt)? */
+  onboarded: boolean
   xp: number
   totalAnswered: number
   totalCorrect: number

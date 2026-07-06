@@ -29,6 +29,7 @@ function initialState(): ProgressState {
   for (const m of MODULES) modules[m.id] = emptyModuleProgress()
   return {
     username: DEFAULT_NAME,
+    onboarded: false,
     xp: 0,
     totalAnswered: 0,
     totalCorrect: 0,
@@ -52,6 +53,9 @@ function mergeSave(parsed: Partial<ProgressState>): ProgressState {
     ...base,
     ...parsed,
     username: parsed.username?.trim() || base.username,
+    // Players who already chose a custom name are considered onboarded.
+    onboarded:
+      parsed.onboarded ?? Boolean(parsed.username && parsed.username.trim() !== DEFAULT_NAME),
     unlocked: parsed.unlocked ?? [],
     mistakes: parsed.mistakes ?? [],
     srs: parsed.srs ?? {},
@@ -83,6 +87,7 @@ type Action =
   | { type: 'RECORD_SURVIVAL'; score: number }
   | { type: 'RECORD_EXAM'; scorePct: number }
   | { type: 'SET_USERNAME'; name: string }
+  | { type: 'ONBOARD'; name: string }
   | { type: 'UNLOCK'; moduleId: ModuleId }
   | { type: 'UNLOCK_ACHIEVEMENTS'; ids: string[] }
   | { type: 'TOGGLE_MUTE' }
@@ -167,6 +172,9 @@ function reducer(state: ProgressState, action: Action): ProgressState {
     case 'SET_USERNAME':
       return { ...state, username: action.name.trim() || DEFAULT_NAME }
 
+    case 'ONBOARD':
+      return { ...state, username: action.name.trim() || DEFAULT_NAME, onboarded: true }
+
     case 'UNLOCK':
       return { ...state, unlocked: uniquePush(state.unlocked, action.moduleId) }
 
@@ -224,6 +232,7 @@ interface ProgressContextValue {
   recordSurvival: (score: number) => void
   recordExam: (scorePct: number) => void
   setUsername: (name: string) => void
+  completeOnboarding: (name: string) => void
   unlockChapter: (moduleId: ModuleId) => void
   toggleMute: () => void
   reset: () => void
@@ -259,6 +268,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       recordSurvival: (score) => dispatch({ type: 'RECORD_SURVIVAL', score }),
       recordExam: (scorePct) => dispatch({ type: 'RECORD_EXAM', scorePct }),
       setUsername: (name) => dispatch({ type: 'SET_USERNAME', name }),
+      completeOnboarding: (name) => dispatch({ type: 'ONBOARD', name }),
       unlockChapter: (moduleId) => dispatch({ type: 'UNLOCK', moduleId }),
       toggleMute: () => dispatch({ type: 'TOGGLE_MUTE' }),
       reset: () => dispatch({ type: 'RESET' }),

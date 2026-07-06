@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Zap, Cpu, Crown, Pencil, Check, Flame, BarChart3 } from 'lucide-react'
+import { Zap, Cpu, Crown, Pencil, Check, Flame, BarChart3, Swords } from 'lucide-react'
 import { useProgress } from '../state/progress'
 import { streakDays } from '../lib/stats'
 import { levelInfo } from '../lib/level'
@@ -7,6 +7,9 @@ import { levelInfo } from '../lib/level'
 interface HeaderProps {
   onOpenCrown: () => void
   onOpenStats: () => void
+  onOpenFriends: () => void
+  /** Shows a red dot on the friends icon (a duel is waiting). */
+  hasPendingChallenge?: boolean
 }
 
 function ProfileChip() {
@@ -69,7 +72,12 @@ function ProfileChip() {
   )
 }
 
-export default function Header({ onOpenCrown, onOpenStats }: HeaderProps) {
+export default function Header({
+  onOpenCrown,
+  onOpenStats,
+  onOpenFriends,
+  hasPendingChallenge = false,
+}: HeaderProps) {
   const { state } = useProgress()
   const streak = streakDays(state.daily)
 
@@ -84,7 +92,7 @@ export default function Header({ onOpenCrown, onOpenStats }: HeaderProps) {
 
         <div className="mr-auto flex shrink-0 items-center gap-1.5">
           {streak > 0 && (
-            <div className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1.5" title="ימי רצף למידה">
+            <div className="hidden items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1.5 sm:flex" title="ימי רצף למידה">
               <Flame size={16} className="text-orange-500" fill="#FB923C" strokeWidth={1.5} />
               <span className="font-display text-sm font-extrabold text-ink tabular-nums">{streak}</span>
             </div>
@@ -94,6 +102,18 @@ export default function Header({ onOpenCrown, onOpenStats }: HeaderProps) {
             <Zap size={17} fill="#FFC800" strokeWidth={0} />
             <span className="font-display text-sm font-extrabold text-ink tabular-nums">{state.xp}</span>
           </div>
+
+          <button
+            onClick={onOpenFriends}
+            aria-label="אתגר חברים"
+            title="אתגרו חבר לדו־קרב"
+            className="relative grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-[#E11D48] to-[#F97316] text-white shadow-pop transition hover:brightness-105"
+          >
+            <Swords size={17} strokeWidth={2.3} />
+            {hasPendingChallenge && (
+              <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-wrong ring-2 ring-white" />
+            )}
+          </button>
 
           <button
             onClick={onOpenCrown}

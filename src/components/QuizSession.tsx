@@ -28,6 +28,11 @@ interface QuizSessionProps {
   moduleId?: ModuleId
   survivalBest?: number
   onSurvivalEnd?: (score: number) => void
+  /**
+   * Skip the built-in results screen when the run ends — the parent navigates
+   * away instead (used by friend duels, which show their own verdict screen).
+   */
+  exitOnEnd?: boolean
   onExit: () => void
 }
 
@@ -54,10 +59,12 @@ export default function QuizSession({
   moduleId,
   survivalBest = 0,
   onSurvivalEnd,
+  exitOnEnd = false,
   onExit,
 }: QuizSessionProps) {
   const { answer, completeSession } = useProgress()
   const survival = mode === 'survival'
+  const endedRef = useRef(false)
 
   const [questions, setQuestions] = useState<SessionQuestion[]>(makeQuestions)
   const [index, setIndex] = useState(0)
@@ -98,13 +105,16 @@ export default function QuizSession({
   useEffect(() => setBestStreak((b) => Math.max(b, streak)), [streak])
 
   const finish = useCallback(() => {
-    if (statusRef.current !== 'active') return
+    if (statusRef.current !== 'active' || endedRef.current) return
+    endedRef.current = true
     if (survival) onSurvivalEnd?.(correctRef.current)
     else if (moduleId && heartsRef.current > 0)
       completeSession({ moduleId, passed: true, perfect: wrongCount === 0 })
+    // Duels: the parent swaps to its own verdict screen — skip ours.
+    if (exitOnEnd) return
     setStatus('result')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [survival, moduleId, onSurvivalEnd, completeSession, wrongCount])
+  }, [survival, moduleId, onSurvivalEnd, completeSession, wrongCount, exitOnEnd])
 
   // Survival countdown timer (paused while reading an explanation).
   useEffect(() => {
@@ -179,6 +189,7 @@ export default function QuizSession({
   }
 
   function retry() {
+    endedRef.current = false
     setQuestions(makeQuestions())
     setIndex(0)
     setPhase('answering')
