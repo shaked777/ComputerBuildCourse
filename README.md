@@ -141,34 +141,30 @@ you're outside the top 10.
 > app). To lock it down later, add Supabase Auth and restrict `update`/`insert` to
 > `auth.uid() = player_id`.
 
-## How the 250 questions become a course
+## The question bank: real past exams
 
-The path mirrors the **course chapters** of 10145. Each chapter node maps to one or
-more `topic` strings in the bank (see `src/data/modules.ts`). The bank's 10 topics
-group into the chapters like so:
+`src/data/questions.json` (mirrored in `computer_organization_brilliant_bank.json`) holds
+**113 authentic multiple-choice questions transcribed from the course's past exams
+(2020–2025, מועדי א/ב, versions X/Y)** — each with the verified correct answer (from the
+official solution sheets, cross-checked by computation) and an explanation based on the
+official worked solution. On top of that, `extraQuestions.ts` adds 24 diagram-based
+questions (chapters ז/ח) and `interactiveQuestions.ts` adds 12 arrange/matching items —
+**~149 questions total**:
 
-| Chapter | Title | Topics → | Qs |
-|---|---|---|---|
-| פרק א | הפשטה של מחשבים | Performance + Amdahl (x2 variants) | 59 |
-| פרק ב | ייצוג מידע במחשב | Conversions + Floating Point | 44 |
-| פרק ג | אלגברה בוליאנית ומעגלים לוגיים | Boolean Algebra | 2 |
-| פרק ד | פקודות שפת המכונה | MIPS Assembly | 54 |
-| פרק ז | מעבד חד-מחזורי | Single-Cycle (diagram Qs) | 12 |
-| פרק ח | מעבד רב-מחזורי | Multi-Cycle (diagram Qs) | 12 |
-| פרק ט | שיפור ביצועים בצנרת | Datapath/Pipeline + Cache | 91 |
+| Chapter | Title | Qs |
+|---|---|---|
+| פרק א | הפשטה של מחשבים (Performance + Amdahl) | 22 |
+| פרק ב | ייצוג מידע במחשב (Conversions + IEEE 754) | 18 + 1 |
+| פרק ג | אלגברה בוליאנית ומעגלים לוגיים | 7 |
+| פרק ד | פקודות שפת המכונה (MIPS) | 27 + 2 |
+| פרק ז | מעבד חד-מחזורי | 6 + 13 |
+| פרק ח | מעבד רב-מחזורי | 12 |
+| פרק ט | שיפור ביצועים בצנרת (Pipeline + Cache) | 33 + 5 |
 
-> **Data notes:**
-> - The bank's "מסלול נתונים וצנרת" topic is entirely *pipeline* content
->   (hazards/forwarding/stalls), so it lives under פרק ט.
-> - Chapters **ז and ח** are not in the generated bank. They're filled by curated,
->   **diagram-based** questions in `src/data/extraQuestions.ts` (merged in `questions.ts`),
->   built from the course practice sheets + summaries (Patterson & Hennessy figures).
->   The diagrams live in `public/diagrams/`.
-> - A chapter with an empty `topics` array renders as a locked "בקרוב" node and is
->   skipped in the unlock chain — add a topic and it lights up automatically.
->
 > The chapter→topic mapping is the only place coupled to the exact Hebrew topic strings.
-> If you regenerate the bank, update `topics` in `src/data/modules.ts`.
+> If you regenerate the bank, keep the same `topic` values or update `topics` in
+> `src/data/modules.ts`. Questions referencing figures that can't be embedded as text
+> (logic-circuit drawings, miss-rate graphs) were deliberately excluded.
 
 ## Diagram (image) questions
 

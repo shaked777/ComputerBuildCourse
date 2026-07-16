@@ -21,12 +21,8 @@ create policy "public insert" on public.leaderboard for insert with check (true)
 create policy "public update" on public.leaderboard for update using (true) with check (true);
 -- Note: no DELETE policy → nobody can wipe the board with the public key.
 
-insert into public.leaderboard (player_id, name, xp) values
-  ('seed-algo',  'אלגוריתם_מהיר', 520),
-  ('seed-bit',   'ביט_מאסטר',     410),
-  ('seed-ninja', 'קוד_נינגה',     300),
-  ('seed-cpu',   'מעבד_על',       160)
-on conflict (player_id) do nothing;
+-- Remove the demo "AI" bots — the board now shows real players only (top 5).
+delete from public.leaderboard where player_id like 'seed-%';
 
 -- ── 2 · Friend challenges (survival duels) ──────────────────────
 create table if not exists public.challenges (
@@ -48,3 +44,20 @@ create policy "public insert" on public.challenges for insert with check (true);
 -- Opponent may fill in their result exactly once (row not yet answered):
 create policy "public update" on public.challenges
   for update using (opponent_score is null) with check (true);
+
+-- ── 3 · Cloud progress backup (progress survives cleared browser storage) ──
+create table if not exists public.profiles (
+  player_id  text primary key,
+  name       text not null check (char_length(name) between 1 and 24),
+  state      jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "public read"   on public.profiles;
+drop policy if exists "public insert" on public.profiles;
+drop policy if exists "public update" on public.profiles;
+create policy "public read"   on public.profiles for select using (true);
+create policy "public insert" on public.profiles for insert with check (true);
+create policy "public update" on public.profiles for update using (true) with check (true);

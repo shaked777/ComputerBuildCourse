@@ -323,7 +323,7 @@ export default function QuizSession({
           >
             <h1
               dir="auto"
-              className="mb-5 font-display text-xl font-extrabold leading-snug text-ink sm:text-[24px]"
+              className="mb-5 whitespace-pre-line font-display text-xl font-extrabold leading-snug text-ink sm:text-[24px]"
             >
               {current.question}
             </h1>

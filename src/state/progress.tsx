@@ -4,6 +4,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   type ReactNode,
 } from 'react'
 import type { ModuleId, ModuleProgress, NodeStatus, ProgressState } from '../types'
@@ -12,12 +13,13 @@ import { moduleQuestionCount } from '../lib/questions'
 import { ACHIEVEMENTS } from '../data/achievements'
 import { nextSrs } from '../lib/srs'
 import { dayKey } from '../lib/stats'
+import { saveProgressToCloud, loadProgressFromCloud } from '../lib/profileApi'
 
 const hasContent = (id: ModuleId) => moduleQuestionCount(id) > 0
 
-const STORAGE_KEY = 'assembly-quest:progress:v4'
+const STORAGE_KEY = 'assembly-quest:progress:v5'
 /** Older saves we can migrate forward (newest first). */
-const LEGACY_KEYS = ['assembly-quest:progress:v3']
+const LEGACY_KEYS = ['assembly-quest:progress:v4', 'assembly-quest:progress:v3']
 export const DEFAULT_NAME = 'שחקן 1'
 
 function emptyModuleProgress(): ModuleProgress {
@@ -70,10 +72,25 @@ function loadState(): ProgressState {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY)
     if (stored) return mergeSave(JSON.parse(stored) as Partial<ProgressState>)
-    // v3 → v4 migration: keep XP, profile, mastery, mistakes, records.
+    // Legacy migration: the question bank was rebuilt in v5, so ids stored in
+    // mistakes/srs/masteredIds refer to different questions — reset those, but
+    // keep the player's identity, XP, records, streaks and achievements.
     for (const key of LEGACY_KEYS) {
       const legacy = window.localStorage.getItem(key)
-      if (legacy) return mergeSave(JSON.parse(legacy) as Partial<ProgressState>)
+      if (legacy) {
+        const migrated = mergeSave(JSON.parse(legacy) as Partial<ProgressState>)
+        return {
+          ...migrated,
+          mistakes: [],
+          srs: {},
+          modules: Object.fromEntries(
+            Object.entries(migrated.modules).map(([id, mod]) => [
+              id,
+              { masteredIds: [] as number[], passedSessions: mod.passedSessions },
+            ]),
+          ) as unknown as ProgressState['modules'],
+        }
+      }
     }
     return initialState()
   } catch {
@@ -91,6 +108,7 @@ type Action =
   | { type: 'UNLOCK'; moduleId: ModuleId }
   | { type: 'UNLOCK_ACHIEVEMENTS'; ids: string[] }
   | { type: 'TOGGLE_MUTE' }
+  | { type: 'HYDRATE'; state: ProgressState }
   | { type: 'RESET' }
 
 function uniquePush<T>(list: T[], item: T): T[] {
@@ -184,6 +202,10 @@ function reducer(state: ProgressState, action: Action): ProgressState {
     case 'TOGGLE_MUTE':
       return { ...state, muted: !state.muted }
 
+    // Restore a cloud-saved profile (sanitized through the same merge as local saves).
+    case 'HYDRATE':
+      return mergeSave(action.state)
+
     case 'RESET':
       return initialState()
 
@@ -242,6 +264,11 @@ const ProgressContext = createContext<ProgressContextValue | null>(null)
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState)
+  // Blocks cloud saves until the one-time restore attempt has finished, so a
+  // brand-new empty state can never clobber an existing cloud backup.
+  const cloudReady = useRef(false)
+  const restoreRan = useRef(false)
+  const saveTimer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     try {
@@ -249,6 +276,34 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     } catch {
       /* storage full / disabled — non-fatal */
     }
+  }, [state])
+
+  // One-time cloud restore: if this browser has no local progress but the
+  // player's cloud backup exists, bring it back.
+  useEffect(() => {
+    if (restoreRan.current) return
+    restoreRan.current = true
+    const localIsFresh = state.totalAnswered === 0 && state.xp === 0
+    void (async () => {
+      if (localIsFresh) {
+        const cloud = await loadProgressFromCloud()
+        if (cloud && (cloud.totalAnswered > 0 || cloud.xp > 0)) {
+          dispatch({ type: 'HYDRATE', state: cloud })
+        }
+      }
+      cloudReady.current = true
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Debounced cloud backup on every change (after the restore attempt).
+  useEffect(() => {
+    if (!cloudReady.current) return
+    window.clearTimeout(saveTimer.current)
+    saveTimer.current = window.setTimeout(() => {
+      void saveProgressToCloud(state)
+    }, 2000)
+    return () => window.clearTimeout(saveTimer.current)
   }, [state])
 
   // Achievements engine: evaluate rules after every state change and unlock

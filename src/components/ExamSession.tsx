@@ -325,7 +325,7 @@ export default function ExamSession({ onExit }: ExamSessionProps) {
             <p className="mb-2 text-xs font-bold text-ink-faint tabular-nums">
               שאלה {idx + 1} מתוך {total}
             </p>
-            <h1 dir="auto" className="mb-5 font-display text-xl font-extrabold leading-snug text-ink sm:text-[23px]">
+            <h1 dir="auto" className="mb-5 whitespace-pre-line font-display text-xl font-extrabold leading-snug text-ink sm:text-[23px]">
               {current.question}
             </h1>
 

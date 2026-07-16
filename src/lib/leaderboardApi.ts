@@ -1,6 +1,8 @@
 import { getSupabase, getPlayerId } from './supabase'
 
 const TABLE = 'leaderboard'
+/** Only the top N players are shown. */
+export const LEADERBOARD_SIZE = 5
 
 export interface RemoteRow {
   player_id: string
@@ -26,17 +28,29 @@ export async function submitScore(name: string, xp: number): Promise<void> {
 }
 
 /**
- * Fetch the top rows plus the player's true global rank.
- * Returns null when Supabase isn't configured or the request fails
- * (the UI falls back to its local mode).
+ * Fetch the top rows plus the player's true global rank. Legacy seed bots
+ * (player_id starting with "seed-") are excluded from both queries.
+ * Returns null when Supabase isn't configured or the request fails.
  */
-export async function fetchLeaderboard(myXp: number, limit = 10): Promise<LeaderboardResult | null> {
+export async function fetchLeaderboard(
+  myXp: number,
+  limit = LEADERBOARD_SIZE,
+): Promise<LeaderboardResult | null> {
   const supabase = await getSupabase()
   if (!supabase) return null
   try {
     const [top, rank] = await Promise.all([
-      supabase.from(TABLE).select('player_id,name,xp').order('xp', { ascending: false }).limit(limit),
-      supabase.from(TABLE).select('*', { count: 'exact', head: true }).gt('xp', myXp),
+      supabase
+        .from(TABLE)
+        .select('player_id,name,xp')
+        .filter('player_id', 'not.like', 'seed-%')
+        .order('xp', { ascending: false })
+        .limit(limit),
+      supabase
+        .from(TABLE)
+        .select('*', { count: 'exact', head: true })
+        .filter('player_id', 'not.like', 'seed-%')
+        .gt('xp', myXp),
     ])
     if (top.error) return null
     return {

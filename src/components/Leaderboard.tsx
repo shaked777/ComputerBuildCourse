@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Trophy, Crown, Medal, MoreHorizontal } from 'lucide-react'
 import { buildLeaderboard } from '../data/leaderboard'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { submitScore, fetchLeaderboard, type LeaderboardResult } from '../lib/leaderboardApi'
+import { submitScore, fetchLeaderboard, LEADERBOARD_SIZE, type LeaderboardResult } from '../lib/leaderboardApi'
 
 interface LeaderboardProps {
   username: string
@@ -35,7 +35,7 @@ export default function Leaderboard({ username, xp }: LeaderboardProps) {
     window.clearTimeout(debounce.current)
     debounce.current = window.setTimeout(async () => {
       await submitScore(username, xp)
-      const res = await fetchLeaderboard(xp, 10)
+      const res = await fetchLeaderboard(xp, LEADERBOARD_SIZE)
       if (res) {
         setRemote(res)
         setLive(true)
