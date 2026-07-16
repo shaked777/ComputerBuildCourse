@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import type { ModuleId, SessionQuestion } from './types'
+import type { ModuleId, QuestionLevel, SessionQuestion } from './types'
 import { MODULES } from './data/modules'
 import { useProgress } from './state/progress'
 import { buildModuleSession, buildReviewSession, buildSurvivalDeck, buildDailyReviewSession } from './lib/session'
@@ -20,11 +20,12 @@ import CrownModal from './components/CrownModal'
 import AchievementToast from './components/AchievementToast'
 import WelcomeModal from './components/WelcomeModal'
 import ChallengeModal from './components/ChallengeModal'
+import ChapterModal from './components/ChapterModal'
 import DuelResult from './components/DuelResult'
 
 type View =
   | { kind: 'path' }
-  | { kind: 'module'; id: ModuleId }
+  | { kind: 'module'; id: ModuleId; level: QuestionLevel }
   | { kind: 'review' }
   | { kind: 'daily' }
   | { kind: 'survival' }
@@ -38,6 +39,8 @@ export default function App() {
   const [view, setView] = useState<View>({ kind: 'path' })
   const [crownOpen, setCrownOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
+  /** Chapter whose level-picker (3 parts) is open. */
+  const [chapterOpen, setChapterOpen] = useState<ModuleId | null>(null)
   /** A duel arriving via ?challenge= link, waiting to be accepted. */
   const [pendingChallenge, setPendingChallenge] = useState<Challenge | null>(null)
 
@@ -73,13 +76,23 @@ export default function App() {
     }
   }, [reset])
 
+  // Crown jump: unlock the chapter, then open its level picker.
   const jumpToChapter = useCallback(
     (id: ModuleId) => {
       unlockChapter(id)
       setCrownOpen(false)
-      setView({ kind: 'module', id })
+      setChapterOpen(id)
     },
     [unlockChapter],
+  )
+
+  const startLevel = useCallback(
+    (level: QuestionLevel) => {
+      if (!chapterOpen) return
+      setView({ kind: 'module', id: chapterOpen, level })
+      setChapterOpen(null)
+    },
+    [chapterOpen],
   )
 
   const startDuel = useCallback(() => {
@@ -94,16 +107,19 @@ export default function App() {
         if (!def) return null
         const masteredIds = state.modules[view.id].masteredIds
         const srs = state.srs
-        const make = (): SessionQuestion[] => buildModuleSession(view.id, masteredIds, srs)
+        const levelLabel = view.level === 1 ? 'יסודות' : view.level === 2 ? 'תרגול' : 'רמת מבחן'
+        const make = (): SessionQuestion[] =>
+          buildModuleSession(view.id, view.level, masteredIds, srs)
         return (
           <QuizSession
-            key={`module-${view.id}`}
+            key={`module-${view.id}-${view.level}`}
             makeQuestions={make}
-            title={`${def.chapter} · ${def.title}`}
+            title={`${def.title} · ${levelLabel}`}
             accent={def.accent}
             theme={def.theme}
             mode="path"
             moduleId={view.id}
+            level={view.level}
             onExit={goHome}
           />
         )
@@ -209,7 +225,7 @@ export default function App() {
               hasPendingChallenge={pendingChallenge !== null}
             />
             <LearningPath
-              onStartModule={(id) => setView({ kind: 'module', id })}
+              onStartModule={(id) => setChapterOpen(id)}
               onReview={() => setView({ kind: 'review' })}
               onSurvival={() => setView({ kind: 'survival' })}
               onExam={() => setView({ kind: 'exam' })}
@@ -230,6 +246,11 @@ export default function App() {
       </AnimatePresence>
 
       <CrownModal open={crownOpen} onClose={() => setCrownOpen(false)} onJump={jumpToChapter} />
+      <ChapterModal
+        def={MODULES.find((m) => m.id === chapterOpen) ?? null}
+        onClose={() => setChapterOpen(null)}
+        onStartLevel={startLevel}
+      />
       <ChallengeModal
         open={friendsOpen}
         pending={pendingChallenge}

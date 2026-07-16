@@ -2,7 +2,7 @@ import { Dumbbell, ChevronLeft, Timer, Flame, GraduationCap, TrendingUp, Calenda
 import { motion } from 'framer-motion'
 import type { ModuleId } from '../types'
 import { MODULES } from '../data/modules'
-import { useProgress, moduleMastery, moduleStatus } from '../state/progress'
+import { useProgress, moduleMastery, moduleStatus, moduleStars } from '../state/progress'
 import { moduleQuestionCount } from '../lib/questions'
 import { dueReviewIds } from '../lib/session'
 import { levelInfo } from '../lib/level'
@@ -20,7 +20,7 @@ interface LearningPathProps {
 // Path geometry (px).
 const W = 360
 const TOP = 74
-const GAP = 190
+const GAP = 200
 const AMP = 84
 const CENTER = W / 2
 const LABEL_SPACE = 80
@@ -46,6 +46,7 @@ export default function LearningPath({
   // Stats only count chapters that actually have questions.
   const contentModules = MODULES.filter((m) => moduleQuestionCount(m.id) > 0)
   const completedCount = contentModules.filter((m) => moduleStatus(state, m.id) === 'completed').length
+  const totalStars = contentModules.reduce((sum, m) => sum + moduleStars(state, m.id), 0)
   const overallMastery =
     contentModules.reduce((sum, m) => sum + moduleMastery(state, m.id), 0) / contentModules.length
   const lvl = levelInfo(state.xp)
@@ -71,7 +72,7 @@ export default function LearningPath({
           שלום, <span dir="auto">{state.username}</span> 👋
         </h1>
         <p className="mt-1 text-sm text-ink-soft">
-          {completedCount} מתוך {contentModules.length} פרקים פעילים הושלמו
+          ⭐ {totalStars} מתוך {contentModules.length * 3} כוכבים · {completedCount} פרקים הושלמו
         </p>
         <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-line">
           <motion.div
@@ -227,6 +228,7 @@ export default function LearningPath({
               def={def}
               status={statuses[i]}
               mastery={moduleMastery(state, def.id)}
+              stars={moduleStars(state, def.id)}
               isCurrent={i === currentIndex}
               onClick={() => onStartModule(def.id)}
             />

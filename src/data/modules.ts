@@ -6,8 +6,10 @@ import {
   Cpu,
   Repeat,
   GitBranch,
+  Database,
+  Calculator,
 } from 'lucide-react'
-import type { ModuleDef } from '../types'
+import type { ModuleDef, QuestionLevel } from '../types'
 
 /**
  * The learning path mirrors the actual course chapters of 10145.
@@ -30,8 +32,8 @@ export const MODULES: ModuleDef[] = [
     id: 'representation',
     chapter: 'פרק ב',
     title: 'ייצוג מידע במחשב',
-    subtitle: 'Conversions · IEEE 754',
-    topics: ['המרות בסיסים וייצוג נתונים', 'ייצוג נתונים ונקודה צפה', 'ייצוג נתונים - המרות'],
+    subtitle: 'Base Conversions',
+    topics: ['המרות בסיסים וייצוג נתונים', 'ייצוג נתונים - המרות'],
     icon: Binary,
     accent: '#3B82F6',
     accentSoft: '#E8F0FE',
@@ -85,13 +87,42 @@ export const MODULES: ModuleDef[] = [
     id: 'pipeline',
     chapter: 'פרק ט',
     title: 'שיפור ביצועים בצנרת',
-    subtitle: 'Pipelining · Cache',
-    topics: ['מסלול נתונים וצנרת', 'זיכרון מטמון (Cache)'],
+    subtitle: 'Pipelining',
+    topics: ['מסלול נתונים וצנרת'],
     icon: GitBranch,
     accent: '#6366F1',
     accentSoft: '#E9EAFE',
     theme: 'pipeline',
   },
+  {
+    id: 'cache',
+    chapter: 'מיקוד',
+    title: 'זיכרון מטמון',
+    subtitle: 'Cache Memory',
+    topics: ['זיכרון מטמון (Cache)'],
+    icon: Database,
+    accent: '#0EA5E9',
+    accentSoft: '#E0F2FE',
+    theme: 'pipeline',
+  },
+  {
+    id: 'floatingpoint',
+    chapter: 'מיקוד',
+    title: 'נקודה צפה',
+    subtitle: 'IEEE 754',
+    topics: ['ייצוג נתונים ונקודה צפה'],
+    icon: Calculator,
+    accent: '#8B5CF6',
+    accentSoft: '#F0EAFE',
+    theme: 'binary',
+  },
+]
+
+/** The three parts of every chapter — each passed part earns a star. */
+export const LEVELS: { level: QuestionLevel; label: string; desc: string }[] = [
+  { level: 1, label: 'יסודות', desc: 'מושגי הבסיס — מה זה ולמה' },
+  { level: 2, label: 'תרגול', desc: 'שאלות קלות לחיזוק ההבנה' },
+  { level: 3, label: 'רמת מבחן', desc: 'שאלות אמיתיות ממבחני עבר' },
 ]
 
 /** Number of questions in a single bite-sized session. */

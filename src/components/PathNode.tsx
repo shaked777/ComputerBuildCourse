@@ -7,6 +7,8 @@ interface PathNodeProps {
   status: NodeStatus
   /** 0..1 */
   mastery: number
+  /** Stars earned in this chapter (0–3, one per passed part). */
+  stars: number
   /** The next actionable node — gets a bouncing "START" bubble. */
   isCurrent: boolean
   onClick: () => void
@@ -22,7 +24,7 @@ const C = 2 * Math.PI * R
  * positioned so they never shift the node — letting the parent place nodes by
  * their center.
  */
-export default function PathNode({ def, status, mastery, isCurrent, onClick }: PathNodeProps) {
+export default function PathNode({ def, status, mastery, stars, isCurrent, onClick }: PathNodeProps) {
   const Icon = def.icon
   const locked = status === 'locked'
   const soon = status === 'soon'
@@ -126,11 +128,6 @@ export default function PathNode({ def, status, mastery, isCurrent, onClick }: P
             <Check size={16} strokeWidth={3.5} />
           </span>
         )}
-        {status === 'in-progress' && (
-          <span className="absolute -bottom-0.5 -left-0.5 grid h-7 w-7 place-items-center rounded-full bg-white shadow-md">
-            <Star size={15} fill={accent} strokeWidth={0} />
-          </span>
-        )}
         {soon && (
           <span className="absolute -bottom-0.5 -left-0.5 grid h-7 w-7 place-items-center rounded-full bg-white text-ink-faint shadow-md">
             <Clock size={15} strokeWidth={2.6} />
@@ -139,7 +136,21 @@ export default function PathNode({ def, status, mastery, isCurrent, onClick }: P
       </motion.button>
 
       {/* label (floats below) */}
-      <div className="pointer-events-none absolute left-1/2 top-full mt-2 w-[170px] -translate-x-1/2 text-center">
+      <div className="pointer-events-none absolute left-1/2 top-full mt-1 w-[170px] -translate-x-1/2 text-center">
+        {/* three part-stars */}
+        {!disabled && (
+          <div className="mb-0.5 flex items-center justify-center gap-0.5" aria-label={`${stars} מתוך 3 כוכבים`}>
+            {[1, 2, 3].map((i) => (
+              <Star
+                key={i}
+                size={13}
+                className={i <= stars ? 'text-gold' : 'text-line'}
+                fill={i <= stars ? '#FFB100' : '#E7E9EF'}
+                strokeWidth={i <= stars ? 1 : 1.5}
+              />
+            ))}
+          </div>
+        )}
         <p className={`font-display text-[11px] font-bold ${disabled ? 'text-ink-faint' : ''}`} style={{ color: disabled ? undefined : accent }}>
           {def.chapter}
         </p>

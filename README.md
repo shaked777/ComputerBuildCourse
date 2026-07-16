@@ -151,15 +151,24 @@ official worked solution. On top of that, `extraQuestions.ts` adds 24 diagram-ba
 questions (chapters ז/ח) and `interactiveQuestions.ts` adds 12 arrange/matching items —
 **~149 questions total**:
 
-| Chapter | Title | Qs |
+**Every chapter has 3 parts** (חלק 1 יסודות · חלק 2 תרגול · חלק 3 רמת מבחן) — passing a
+part earns a ⭐, and **one star unlocks the next chapter** (3 stars = chapter complete/gold).
+Levels 1–2 are ~100 purpose-written basics/easy questions (`src/data/basicsQuestions.json`);
+level 3 is the authentic exam bank. The path has **9 chapters** — the 7 course chapters plus
+two "מיקוד" chapters split out for focused study: **זיכרון מטמון** (from פרק ט) and
+**נקודה צפה** (IEEE 754, from פרק ב).
+
+| Chapter | Title | L1 / L2 / L3 |
 |---|---|---|
-| פרק א | הפשטה של מחשבים (Performance + Amdahl) | 22 |
-| פרק ב | ייצוג מידע במחשב (Conversions + IEEE 754) | 18 + 1 |
-| פרק ג | אלגברה בוליאנית ומעגלים לוגיים | 7 |
-| פרק ד | פקודות שפת המכונה (MIPS) | 27 + 2 |
-| פרק ז | מעבד חד-מחזורי | 6 + 13 |
-| פרק ח | מעבד רב-מחזורי | 12 |
-| פרק ט | שיפור ביצועים בצנרת (Pipeline + Cache) | 33 + 5 |
+| פרק א | הפשטה של מחשבים (Performance + Amdahl) | 7 / 7 / 22 |
+| פרק ב | ייצוג מידע במחשב (המרות בסיסים) | 6 / 7 / 9 |
+| פרק ג | אלגברה בוליאנית ומעגלים לוגיים | 6 / 6 / 7 |
+| פרק ד | פקודות שפת המכונה (MIPS) | 8 / 9 / 27 |
+| פרק ז | מעבד חד-מחזורי | 7 / 9 / 10 |
+| פרק ח | מעבד רב-מחזורי | 6 / 7 / 5 |
+| פרק ט | שיפור ביצועים בצנרת (Pipeline) | 7 / 7 / 14 |
+| מיקוד | זיכרון מטמון | 8 / 8 / 19 |
+| מיקוד | נקודה צפה (IEEE 754) | 7 / 6 / 9 |
 
 > The chapter→topic mapping is the only place coupled to the exact Hebrew topic strings.
 > If you regenerate the bank, keep the same `topic` values or update `topics` in

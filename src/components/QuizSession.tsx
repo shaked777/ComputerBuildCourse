@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, Flame, Clock, Route, Dumbbell } from 'lucide-react'
-import type { ModuleId, QuizMode, SessionQuestion, ThemeKey } from '../types'
+import type { ModuleId, QuizMode, QuestionLevel, SessionQuestion, ThemeKey } from '../types'
 import { useProgress } from '../state/progress'
 import { moduleIdForTopic } from '../lib/questions'
 import { MODULES, SESSION_HEARTS, XP_PER_CORRECT, XP_CLEAR_BONUS, XP_PERFECT_BONUS } from '../data/modules'
@@ -26,6 +26,8 @@ interface QuizSessionProps {
   theme: ThemeKey
   mode: QuizMode
   moduleId?: ModuleId
+  /** Which part of the chapter is being played (path mode) — earns its star. */
+  level?: QuestionLevel
   survivalBest?: number
   onSurvivalEnd?: (score: number) => void
   /**
@@ -57,6 +59,7 @@ export default function QuizSession({
   theme,
   mode,
   moduleId,
+  level = 3,
   survivalBest = 0,
   onSurvivalEnd,
   exitOnEnd = false,
@@ -109,12 +112,12 @@ export default function QuizSession({
     endedRef.current = true
     if (survival) onSurvivalEnd?.(correctRef.current)
     else if (moduleId && heartsRef.current > 0)
-      completeSession({ moduleId, passed: true, perfect: wrongCount === 0 })
+      completeSession({ moduleId, level, passed: true, perfect: wrongCount === 0 })
     // Duels: the parent swaps to its own verdict screen — skip ours.
     if (exitOnEnd) return
     setStatus('result')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [survival, moduleId, onSurvivalEnd, completeSession, wrongCount, exitOnEnd])
+  }, [survival, moduleId, level, onSurvivalEnd, completeSession, wrongCount, exitOnEnd])
 
   // Survival countdown timer (paused while reading an explanation).
   useEffect(() => {

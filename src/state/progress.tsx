@@ -23,7 +23,7 @@ const LEGACY_KEYS = ['assembly-quest:progress:v4', 'assembly-quest:progress:v3']
 export const DEFAULT_NAME = 'שחקן 1'
 
 function emptyModuleProgress(): ModuleProgress {
-  return { masteredIds: [], passedSessions: 0 }
+  return { masteredIds: [], passedSessions: 0, starLevels: [] }
 }
 
 function initialState(): ProgressState {
@@ -51,6 +51,18 @@ function initialState(): ProgressState {
 /** Merge a (possibly partial / older-schema) save into a fresh base state. */
 function mergeSave(parsed: Partial<ProgressState>): ProgressState {
   const base = initialState()
+  // Normalize each stored module: older saves lack starLevels — players who
+  // already passed sessions in a chapter keep their unlocks via a level-3 star.
+  const modules = { ...base.modules }
+  for (const [id, mod] of Object.entries(parsed.modules ?? {})) {
+    if (!(id in modules)) continue
+    const m = mod as Partial<ModuleProgress>
+    modules[id as ModuleId] = {
+      masteredIds: m.masteredIds ?? [],
+      passedSessions: m.passedSessions ?? 0,
+      starLevels: m.starLevels ?? ((m.passedSessions ?? 0) > 0 ? [3] : []),
+    }
+  }
   return {
     ...base,
     ...parsed,
@@ -63,7 +75,7 @@ function mergeSave(parsed: Partial<ProgressState>): ProgressState {
     srs: parsed.srs ?? {},
     daily: parsed.daily ?? {},
     achievements: parsed.achievements ?? [],
-    modules: { ...base.modules, ...(parsed.modules ?? {}) },
+    modules,
   }
 }
 
@@ -86,7 +98,11 @@ function loadState(): ProgressState {
           modules: Object.fromEntries(
             Object.entries(migrated.modules).map(([id, mod]) => [
               id,
-              { masteredIds: [] as number[], passedSessions: mod.passedSessions },
+              {
+                masteredIds: [] as number[],
+                passedSessions: mod.passedSessions,
+                starLevels: mod.passedSessions > 0 ? [3] : [],
+              },
             ]),
           ) as unknown as ProgressState['modules'],
         }
@@ -100,7 +116,7 @@ function loadState(): ProgressState {
 
 type Action =
   | { type: 'ANSWER'; questionId: number; moduleId: ModuleId; correct: boolean }
-  | { type: 'COMPLETE_SESSION'; moduleId: ModuleId; passed: boolean; perfect: boolean }
+  | { type: 'COMPLETE_SESSION'; moduleId: ModuleId; level: number; passed: boolean; perfect: boolean }
   | { type: 'RECORD_SURVIVAL'; score: number }
   | { type: 'RECORD_EXAM'; scorePct: number }
   | { type: 'SET_USERNAME'; name: string }
@@ -176,7 +192,12 @@ function reducer(state: ProgressState, action: Action): ProgressState {
         daily: bumpDaily(state.daily, { xp: bonus }),
         modules: {
           ...state.modules,
-          [action.moduleId]: { ...mod, passedSessions: mod.passedSessions + 1 },
+          [action.moduleId]: {
+            ...mod,
+            passedSessions: mod.passedSessions + 1,
+            // Passing a part earns its star (once per level).
+            starLevels: uniquePush(mod.starLevels ?? [], action.level),
+          },
         },
       }
     }
@@ -223,6 +244,11 @@ export function moduleMastery(state: ProgressState, moduleId: ModuleId): number 
   return Math.min(1, done / total)
 }
 
+/** Stars earned in a chapter (0–3): one per passed part/level. */
+export function moduleStars(state: ProgressState, moduleId: ModuleId): number {
+  return state.modules[moduleId]?.starLevels?.length ?? 0
+}
+
 export function moduleStatus(state: ProgressState, moduleId: ModuleId): NodeStatus {
   if (!hasContent(moduleId)) return 'soon'
 
@@ -234,14 +260,16 @@ export function moduleStatus(state: ProgressState, moduleId: ModuleId): NodeStat
       break
     }
   }
+  // One star in the previous chapter unlocks the next one.
   const unlocked =
-    state.unlocked.includes(moduleId) || prev === null || state.modules[prev].passedSessions > 0
+    state.unlocked.includes(moduleId) || prev === null || moduleStars(state, prev) >= 1
   if (!unlocked) return 'locked'
 
-  if (moduleMastery(state, moduleId) >= 1) return 'completed'
+  // All three parts passed → the chapter is complete (gold).
+  if (moduleStars(state, moduleId) >= 3) return 'completed'
 
   const mod = state.modules[moduleId]
-  if (mod.passedSessions > 0 || mod.masteredIds.length > 0) return 'in-progress'
+  if (moduleStars(state, moduleId) > 0 || mod.masteredIds.length > 0) return 'in-progress'
   return 'available'
 }
 
@@ -250,7 +278,7 @@ export function moduleStatus(state: ProgressState, moduleId: ModuleId): NodeStat
 interface ProgressContextValue {
   state: ProgressState
   answer: (args: { questionId: number; moduleId: ModuleId; correct: boolean }) => void
-  completeSession: (args: { moduleId: ModuleId; passed: boolean; perfect: boolean }) => void
+  completeSession: (args: { moduleId: ModuleId; level: number; passed: boolean; perfect: boolean }) => void
   recordSurvival: (score: number) => void
   recordExam: (scorePct: number) => void
   setUsername: (name: string) => void

@@ -1,4 +1,4 @@
-import type { Question, SessionQuestion, ModuleId, SrsRecord } from '../types'
+import type { Question, SessionQuestion, ModuleId, SrsRecord, QuestionLevel } from '../types'
 import { SESSION_SIZE, MODULES } from '../data/modules'
 import { questionsForModule, getQuestionById, ALL_QUESTIONS } from './questions'
 import { classifyQuestion } from './classify'
@@ -20,18 +20,20 @@ function toSessionQuestion(q: Question): SessionQuestion {
 }
 
 /**
- * Build a bite-sized session for a chapter, ordered by learning value:
+ * Build a bite-sized session for one part (level) of a chapter, ordered by
+ * learning value:
  * 1. questions never answered correctly (new material),
  * 2. mastered questions whose spaced-repetition review is due,
  * 3. everything else as filler.
  */
 export function buildModuleSession(
   moduleId: ModuleId,
+  level: QuestionLevel,
   masteredIds: number[],
   srs: Record<number, SrsRecord>,
   count: number = SESSION_SIZE,
 ): SessionQuestion[] {
-  const pool = questionsForModule(moduleId)
+  const pool = questionsForModule(moduleId, level)
   const mastered = new Set(masteredIds)
   const today = dayKey()
 
@@ -96,10 +98,11 @@ export function buildSurvivalDeck(): SessionQuestion[] {
  * choice/fill layouts — matching real exam conditions.
  */
 export function buildExam(count = 15): SessionQuestion[] {
+  // Real exam conditions: exam-level questions only, choice/fill layouts only.
   const eligible = new Set(
     ALL_QUESTIONS.filter((q) => {
       const kind = classifyQuestion(q)
-      return kind === 'choice' || kind === 'fill'
+      return (q.level ?? 3) === 3 && (kind === 'choice' || kind === 'fill')
     }).map((q) => q.id),
   )
 

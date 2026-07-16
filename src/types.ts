@@ -9,6 +9,9 @@ export interface MatchPair {
   match: string
 }
 
+/** Difficulty level of a question: 1=יסודות, 2=תרגול קל, 3=רמת מבחן. */
+export type QuestionLevel = 1 | 2 | 3
+
 /** A single question, matching the shape of questions.json (+ optional extras). */
 export interface Question {
   id: number
@@ -17,6 +20,8 @@ export interface Question {
   options: string[]
   correct_answer: string
   explanation: string
+  /** Difficulty level. Missing → exam level (3). */
+  level?: QuestionLevel
   /** Optional diagram filename in /public/diagrams shown above the question. */
   image?: string
   /** Explicit interactive kind. If omitted, the engine classifies automatically. */
@@ -41,6 +46,8 @@ export type ModuleId =
   | 'singlecycle'
   | 'multicycle'
   | 'pipeline'
+  | 'cache'
+  | 'floatingpoint'
 
 /** Visual theme key applied to a chapter's quiz session. */
 export type ThemeKey =
@@ -80,6 +87,8 @@ export interface ModuleProgress {
   masteredIds: number[]
   /** Number of sessions cleared without running out of hearts. */
   passedSessions: number
+  /** Levels (1/2/3) whose session was passed — each one is a star. */
+  starLevels: number[]
 }
 
 /** Spaced-repetition record for one question (Leitner system). */
