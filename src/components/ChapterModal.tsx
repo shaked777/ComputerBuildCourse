@@ -73,8 +73,7 @@ export default function ChapterModal({ def, onClose, onStartLevel }: ChapterModa
               {LEVELS.map(({ level, label, desc }) => {
                 const LevelIcon = LEVEL_ICONS[level]
                 const earned = state.modules[def.id]?.starLevels?.includes(level) ?? false
-                const count = moduleQuestionCount(def.id, level)
-                const empty = count === 0
+                const empty = moduleQuestionCount(def.id, level) === 0
                 return (
                   <li key={level}>
                     <button
@@ -101,9 +100,6 @@ export default function ChapterModal({ def, onClose, onStartLevel }: ChapterModa
                         <span className="flex items-center gap-2">
                           <span className="font-display font-extrabold text-ink">
                             חלק {level} · {label}
-                          </span>
-                          <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-bold text-ink-soft tabular-nums">
-                            {count} שאלות
                           </span>
                         </span>
                         <span className="block truncate text-xs text-ink-soft">{desc}</span>

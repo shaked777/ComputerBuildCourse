@@ -153,8 +153,30 @@ questions (chapters ז/ח) and `interactiveQuestions.ts` adds 12 arrange/matchin
 
 **Every chapter has 3 parts** (חלק 1 יסודות · חלק 2 תרגול · חלק 3 רמת מבחן) — passing a
 part earns a ⭐, and **one star unlocks the next chapter** (3 stars = chapter complete/gold).
-Levels 1–2 are ~100 purpose-written basics/easy questions (`src/data/basicsQuestions.json`);
-level 3 is the authentic exam bank. The path has **9 chapters** — the 7 course chapters plus
+**Every part has at least 20 questions** (~550 total): levels 1–2 come from
+`basicsQuestions.json` + `expansionQuestions.json` (numeric ones generated with
+programmatically-computed answers); level 3 is the authentic exam bank plus verified
+exam-style variants. Question counts are intentionally not shown to players.
+
+## Admin dashboard (super-user)
+
+Open the site with `?admin` (e.g. `https://your-site.netlify.app/?admin`) and enter the
+admin passcode. The dashboard shows: total/active players (today & 7 days, live "now"
+indicator), per-player XP/level/stars/answers/accuracy/streak/exam/survival bests and
+last-seen time, plus totals (answers, duels). The passcode is never stored — only its
+SHA-256 hash, via the `VITE_ADMIN_CODE_HASH` env var (set it in Netlify too). Note that
+with an anon-key-only setup the underlying tables are technically readable by anyone with
+the site's key — the passcode gates the UI, not the data; don't store anything sensitive.
+
+## Hardening & capacity
+
+- **ErrorBoundary**: a render crash shows a friendly reload screen instead of a white page.
+- **Input sanitization**: player names are stripped of control/bidi characters and capped.
+- **DB constraints + RLS**: score bounds, name-length checks, no public DELETE anywhere,
+  duel results are update-once. Indexes on `leaderboard(xp)` and `profiles(updated_at)`.
+- **Concurrency**: the app is a static bundle (Netlify CDN) + Supabase free tier
+  (hundreds of concurrent connections) — 10 simultaneous players is far below any limit;
+  writes are debounced (2s) so load stays minimal. The path has **9 chapters** — the 7 course chapters plus
 two "מיקוד" chapters split out for focused study: **זיכרון מטמון** (from פרק ט) and
 **נקודה צפה** (IEEE 754, from פרק ב).
 

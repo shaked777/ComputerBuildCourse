@@ -1,5 +1,6 @@
 import raw from '../data/questions.json'
 import basics from '../data/basicsQuestions.json'
+import expansion from '../data/expansionQuestions.json'
 import type { Question, ModuleId, QuestionLevel } from '../types'
 import { MODULES } from '../data/modules'
 import { EXTRA_QUESTIONS } from '../data/extraQuestions'
@@ -25,6 +26,7 @@ const LEVEL_OVERRIDES: Record<number, QuestionLevel> = {
 const RAW_QUESTIONS: Question[] = [
   ...(raw as unknown as Question[]),
   ...(basics as unknown as Question[]),
+  ...(expansion as unknown as Question[]),
   ...EXTRA_QUESTIONS,
   ...INTERACTIVE_QUESTIONS,
 ].map((q) => ({ ...q, level: q.level ?? LEVEL_OVERRIDES[q.id] ?? 3 }))

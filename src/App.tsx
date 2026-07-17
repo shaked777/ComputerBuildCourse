@@ -22,6 +22,7 @@ import WelcomeModal from './components/WelcomeModal'
 import ChallengeModal from './components/ChallengeModal'
 import ChapterModal from './components/ChapterModal'
 import DuelResult from './components/DuelResult'
+import AdminView from './components/AdminView'
 
 type View =
   | { kind: 'path' }
@@ -33,10 +34,13 @@ type View =
   | { kind: 'stats' }
   | { kind: 'duel' }
   | { kind: 'duelResult'; score: number }
+  | { kind: 'admin' }
 
 export default function App() {
   const { state, reset, recordSurvival, unlockChapter } = useProgress()
-  const [view, setView] = useState<View>({ kind: 'path' })
+  const [view, setView] = useState<View>(() =>
+    new URLSearchParams(window.location.search).has('admin') ? { kind: 'admin' } : { kind: 'path' },
+  )
   const [crownOpen, setCrownOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
   /** Chapter whose level-picker (3 parts) is open. */
@@ -207,6 +211,17 @@ export default function App() {
 
       case 'stats':
         return <StatsView key="stats" onBack={goHome} onReset={handleReset} />
+
+      case 'admin':
+        return (
+          <AdminView
+            key="admin"
+            onBack={() => {
+              window.history.replaceState(null, '', window.location.pathname)
+              goHome()
+            }}
+          />
+        )
 
       default:
         return null

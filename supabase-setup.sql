@@ -61,3 +61,7 @@ drop policy if exists "public update" on public.profiles;
 create policy "public read"   on public.profiles for select using (true);
 create policy "public insert" on public.profiles for insert with check (true);
 create policy "public update" on public.profiles for update using (true) with check (true);
+
+-- ── 4 · Indexes (fast top-N leaderboard + admin activity queries) ──
+create index if not exists leaderboard_xp_idx on public.leaderboard (xp desc);
+create index if not exists profiles_updated_idx on public.profiles (updated_at desc);
